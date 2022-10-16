@@ -12,11 +12,13 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"xiaosheng/tools"
 )
 
 var (
 	FeishuStringList = make([]tools.StructModel, 0)
+	wg               = sync.WaitGroup{}
 )
 
 type Model = tools.StructModel
@@ -52,8 +54,10 @@ func getSql() {
 		if err == io.EOF {
 			fmt.Println("一共有", totLine, "行内容")
 			rangeArray()
-			writeToFile()
-			writeToExcel()
+			wg.Add(1)
+			go writeToFile()
+			wg.Add(1)
+			go writeToExcel()
 			break
 		}
 
@@ -116,7 +120,7 @@ func parse(content string) {
 				o.del("'").del("\"").del(",")
 				m.NameNote = o.str
 				m.Name = o.str
-				m.Type = "number"
+				//m.Type = "number"
 			}
 
 		}
@@ -144,6 +148,7 @@ func writeToFile() {
 		}
 	}
 	f.WriteString("}\n")
+	wg.Done()
 }
 
 func writeToExcel() error {
@@ -195,6 +200,7 @@ func writeToExcel() error {
 		fmt.Println(err)
 		return errors.New(fmt.Sprintf("save file failed, path:(%s)", fileNamePath))
 	}
+	wg.Done()
 	return nil
 }
 
@@ -217,4 +223,5 @@ func main() {
 
 	*/
 	getSql()
+	wg.Wait()
 }
