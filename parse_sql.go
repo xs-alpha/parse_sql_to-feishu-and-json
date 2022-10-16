@@ -95,7 +95,7 @@ func parse(content string) {
 		m.IsNecessary = "否"
 		originTypeIndex := 0
 		for index, eachItem := range splitStringList {
-			if len(eachItem) == 0 || eachItem == " " {
+			if len(eachItem) == 0 || strings.EqualFold(eachItem, " ") {
 				originTypeIndex++
 				continue
 			}
