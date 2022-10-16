@@ -43,7 +43,6 @@ func getSql() {
 
 	totLine := 0
 	for {
-		//func (b *Reader) ReadLine() (line []byte, isPrefix bool, err error)
 		content, isPrefix, err := reader.ReadLine()
 
 		//当单行的内容超过缓冲区时，isPrefix会被置为真；否则为false；
@@ -55,8 +54,8 @@ func getSql() {
 		if err == io.EOF {
 			fmt.Println("一共有", totLine, "行内容")
 			rangeArray()
-			writeToFile()
-			writeToExcel()
+			go writeToFile()
+			go writeToExcel()
 			break
 		}
 
