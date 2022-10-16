@@ -29,6 +29,33 @@ func (t *StructModel) JudgeType() {
 	if FieldsInclude(item, "tinyint") {
 		t.Type = "integer"
 	}
+	if FieldsInclude(item, "timestamp") {
+		t.Type = "timestamp"
+	}
+	if FieldsInclude(item, "date") {
+		t.Type = "date"
+	}
+	if FieldsInclude(item, "bool") {
+		t.Type = "Boolean"
+	}
+	if FieldsInclude(item, "double") {
+		t.Type = "float"
+	}
+	if FieldsInclude(item, "float") {
+		t.Type = "float"
+	}
+	if FieldsInclude(item, "decimal") {
+		t.Type = "float"
+	}
+	if FieldsInclude(item, "text") {
+		t.Type = "string"
+	}
+	if FieldsInclude(item, "enum") {
+		t.Type = "enum"
+	}
+	if FieldsInclude(item, "binary") {
+		t.Type = "binary"
+	}
 }
 
 func FieldsInclude(oriStr string, destStr string) bool {
