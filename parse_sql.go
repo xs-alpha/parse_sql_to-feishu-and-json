@@ -35,10 +35,8 @@ func getSql() {
 	f, err := os.Open(tools.SqlName)
 	defer f.Close()
 	if err != nil {
-		//panic(err)
 		fmt.Println(err)
 	}
-	//func NewReader(rd io.Reader) *Reader
 	reader := bufio.NewReader(f)
 
 	totLine := 0
