@@ -125,6 +125,7 @@ func parse(content string) {
 
 		}
 		m.JudgeType()
+		m.DealWithName()
 		FeishuStringList = append(FeishuStringList, *m)
 	}
 	fmt.Println(FeishuStringList)

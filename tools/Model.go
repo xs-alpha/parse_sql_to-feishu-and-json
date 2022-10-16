@@ -64,3 +64,13 @@ func FieldsInclude(oriStr string, destStr string) bool {
 	}
 	return false
 }
+
+func (t *StructModel) DealWithName() {
+	if strings.Contains(t.Name, "(") || strings.Contains(t.Name, "（") {
+		splitStr := strings.Split(t.Name, "(")
+		if strings.EqualFold(splitStr[0], t.Name) {
+			splitStr = strings.Split(t.Name, "（")
+		}
+		t.Name = splitStr[0]
+	}
+}

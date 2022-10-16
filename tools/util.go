@@ -45,6 +45,6 @@ func IsChineseChar(str string) bool {
 	return false
 }
 
-func JudgeType2() {
-
-}
+//func DealWithName() {
+//
+//}
