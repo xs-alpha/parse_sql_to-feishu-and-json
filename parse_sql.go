@@ -8,22 +8,16 @@ import (
 	"io"
 	"log"
 	"os"
-	"regexp"
+	"path"
 	"strings"
-	"unicode"
+	"xiaosheng/tools"
 )
 
 var (
-	SqlKeyWord       = []string{"int", "varchar", "date", "timestamp", "bigint", "tinyint", "bool", "double", "float", "decimal", "char", "text", "enum", "bit", "set", "binary", "blob", "null"}
-	FeishuStringList = make([]string, 0)
+	FeishuStringList = make([]tools.StructModel, 0)
 )
 
-type Model struct {
-	Name        string
-	Alias       string
-	IsNecessary string
-	NameNote    string
-}
+type Model = tools.StructModel
 
 type Operate struct {
 	str string
@@ -36,7 +30,7 @@ func (op *Operate) del(trim string) *Operate {
 }
 
 func getSql() {
-	f, err := os.Open("./parse.sql")
+	f, err := os.Open(tools.SqlName)
 	defer f.Close()
 	if err != nil {
 		//panic(err)
@@ -50,8 +44,6 @@ func getSql() {
 		//func (b *Reader) ReadLine() (line []byte, isPrefix bool, err error)
 		content, isPrefix, err := reader.ReadLine()
 
-		//fmt.Println(string(content), isPrefix, err)
-
 		//当单行的内容超过缓冲区时，isPrefix会被置为真；否则为false；
 		if !isPrefix {
 			totLine++
@@ -62,20 +54,11 @@ func getSql() {
 			fmt.Println("一共有", totLine, "行内容")
 			rangeArray()
 			writeToFile()
+			writeToExcel()
 			break
 		}
 
 	}
-}
-
-// IsChineseChar 判断是否是中文
-func IsChineseChar(str string) bool {
-	for _, r := range str {
-		if unicode.Is(unicode.Scripts["Han"], r) || (regexp.MustCompile("[\u3002\uff1b\uff0c\uff1a\u201c\u201d\uff08\uff09\u3001\uff1f\u300a\u300b]").MatchString(string(r))) {
-			return true
-		}
-	}
-	return false
 }
 
 func parse(content string) {
@@ -91,7 +74,7 @@ func parse(content string) {
 
 	// 判断是否包含基本数据类型
 	flag := false
-	for _, item := range SqlKeyWord {
+	for _, item := range tools.SqlKeyWord {
 		if strings.Contains(strings.ToLower(content), item) {
 			flag = true
 		}
@@ -107,8 +90,10 @@ func parse(content string) {
 		splitStringList := strings.Split(lower, " ")
 		m := new(Model)
 		m.IsNecessary = "否"
+		originTypeIndex := 0
 		for index, eachItem := range splitStringList {
-			if len(eachItem) == 0 {
+			if len(eachItem) == 0 || eachItem == " " {
+				originTypeIndex++
 				continue
 			}
 			// 未后续操作做铺垫
@@ -119,62 +104,69 @@ func parse(content string) {
 				// todo:去掉``
 				o.del("`")
 				m.Alias = o.str
+				originTypeIndex = index + 1
 			}
 			//if strings.HasSuffix(eachItem, "'")||strings.HasSuffix(eachItem, ",")||IsChineseChar(eachItem)
+			if index == originTypeIndex {
+				o.del("'").del("\"")
+				m.OriginType = o.str
+			}
+			m.IsNecessary = "否"
 			if index == len(splitStringList)-1 {
 				// 去掉‘’或者“”“”获取注释
 				o.del("'").del("\"").del(",")
 				m.NameNote = o.str
 				m.Name = o.str
+				m.Type = "number"
 			}
 
 		}
-		insertStr := m.Name + "\n" + m.Alias + "\n" + m.IsNecessary + "\n" + m.NameNote
-		FeishuStringList = append(FeishuStringList, insertStr)
+		m.JudgeType()
+		FeishuStringList = append(FeishuStringList, *m)
 	}
 	fmt.Println(FeishuStringList)
 }
 
 func writeToFile() {
-	f, err := os.Create("afile.txt")
+	f, err := os.Create("json.json")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer f.Close()
-
-	for _, line := range FeishuStringList {
-		_, err := f.WriteString(line + "\n")
+	f.WriteString("{\n")
+	for i, m := range FeishuStringList {
+		insertStr := "\"" + m.Alias + "\"" + ": " + "\"\""
+		if i != len(FeishuStringList)-1 {
+			insertStr += ","
+		}
+		_, err := f.WriteString("\t" + insertStr + "\n")
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+	f.WriteString("}\n")
 }
 
 func writeToExcel() error {
-	activeSheetName := "test"
-	fileNamePath := "./test.xlsx"
-	//_ = tools.PathDirCreate("./test.xlxs") //不存在创建目录
-	//activeSheetName := "Sheet1"
-	//fileNamePath := path.Join(dirPath, fileName)
-	//exists, err := tools.PathFileExists(fileNamePath) //判断文件是否存在创建目录
-	exists, err := os.Stat(fileNamePath)
+	activeSheetName := tools.ActiveSheetName
+	fileNamePath := path.Join(tools.DirPath, tools.XLSXFileName)
+	exists, err := tools.FileExists(fileNamePath)
 	rowNum := 0
 	lastLineNum := 0
 	var f *excelize.File
 	// 创建excel
-	if exists != nil || err != nil {
+	if !exists || err != nil {
 		f = excelize.NewFile()
 		// Create a new sheet.
 		index := f.NewSheet(activeSheetName)
 
-		// Set active sheet of the workbook.
 		f.SetActiveSheet(index)
-		// Set tabletitle value of a cell.
 		tableInfo := map[string]string{
-			"A1": "Id",
-			"B1": "Filename",
-			"C1": "Product",
-			"D1": "Fofaquery",
+			"A1": "参数名",
+			"B1": "变量",
+			"C1": "类型",
+			"D1": "必填",
+			"E1": "描述",
 		}
 		for k, v := range tableInfo {
 			f.SetCellValue(activeSheetName, k, v)
@@ -184,21 +176,22 @@ func writeToExcel() error {
 		rows, _ := f.GetRows(activeSheetName)
 		lastLineNum = len(rows) //找到最后一行
 	}
-	// Set table content value of a cell.
+	// Set
 	for index, list := range FeishuStringList {
-		if exists != nil || err != nil {
+		if exists || err != nil {
 			//如果不存在从第2行写入
 			rowNum = index + 2
 		} else {
 			//否则从文件内容尾行写入
 			rowNum = lastLineNum + index + 1
 		}
-		f.SetCellValue(activeSheetName, fmt.Sprintf("A%d", rowNum), list.Id)
-		f.SetCellValue(activeSheetName, fmt.Sprintf("B%d", rowNum), list.Filename)
-		f.SetCellValue(activeSheetName, fmt.Sprintf("C%d", rowNum), list.Product)
-		f.SetCellValue(activeSheetName, fmt.Sprintf("D%d", rowNum), list.Fofaquery)
+		f.SetCellValue(activeSheetName, fmt.Sprintf("A%d", rowNum), list.Name)
+		f.SetCellValue(activeSheetName, fmt.Sprintf("B%d", rowNum), list.Alias)
+		f.SetCellValue(activeSheetName, fmt.Sprintf("C%d", rowNum), list.Type)
+		f.SetCellValue(activeSheetName, fmt.Sprintf("D%d", rowNum), list.IsNecessary)
+		f.SetCellValue(activeSheetName, fmt.Sprintf("E%d", rowNum), list.NameNote)
 	}
-	// Save spreadsheet by the given path.  static/downloads/Book1.xlsx
+	// Save
 	if err := f.SaveAs(fileNamePath); err != nil {
 		fmt.Println(err)
 		return errors.New(fmt.Sprintf("save file failed, path:(%s)", fileNamePath))
