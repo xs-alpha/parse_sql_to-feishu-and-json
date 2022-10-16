@@ -1,5 +1,7 @@
 package tools
 
+// author：xiaosheng
+
 import "strings"
 
 var SqlKeyWord = []string{"int", "varchar", "date", "timestamp", "bigint", "tinyint", "bool", "double", "float", "decimal", "char", "text", "enum", "bit", "set", "binary", "blob"}
