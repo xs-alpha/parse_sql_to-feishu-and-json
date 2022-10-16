@@ -52,8 +52,8 @@ func getSql() {
 		if err == io.EOF {
 			fmt.Println("一共有", totLine, "行内容")
 			rangeArray()
-			go writeToFile()
-			go writeToExcel()
+			writeToFile()
+			writeToExcel()
 			break
 		}
 
