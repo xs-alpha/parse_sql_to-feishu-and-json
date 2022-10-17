@@ -282,13 +282,14 @@ func main() {
 
 	var excute = 1
 	fmt.Println("请输入要进行的操作： 1：根据sql生成json和飞书表单  2： 根据飞书表格字段名生成json")
+	fmt.Print("->:")
 	fmt.Scanln(&excute)
 	if excute == 1 {
 		Init()
 		getSql()
+		wg.Wait()
 	} else {
 
 	}
 	// 根据数据库字段名自动生成json, 添加cmd args处理或者从用户端输入
-	wg.Wait()
 }
