@@ -10,7 +10,7 @@ run software and you will get two file
 > you can change filename and filepath by clone source code and change filename located in tools/const.go
 
 # 使用
-把sql建表语句放到parse.sql文件中，关闭文件
+把sql建表语句放到parse.sql文件中，关闭文件, 没有的话需要新建
 
 运行软件，将会得到两个文件，
 
