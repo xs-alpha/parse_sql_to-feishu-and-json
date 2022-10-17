@@ -280,7 +280,15 @@ func main() {
 
 	// 用配置文件中的配置覆盖默认配置
 
-	Init()
-	getSql()
+	var excute = 1
+	fmt.Println("请输入要进行的操作： 1：根据sql生成json和飞书表单  2： 根据飞书表格字段名生成json")
+	fmt.Scanln(&excute)
+	if excute == 1 {
+		Init()
+		getSql()
+	} else {
+
+	}
+	// 根据数据库字段名自动生成json, 添加cmd args处理或者从用户端输入
 	wg.Wait()
 }
