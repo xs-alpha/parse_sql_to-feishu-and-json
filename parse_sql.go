@@ -35,8 +35,7 @@ func init() {
 	FileStruct.JsonFileName = tools.JsonFileName
 	FileStruct.XLSXFileName = tools.XLSXFileName
 	FileStruct.DirPath = tools.DirPath
-
-	//configObj.NewJsonAndSqlFile = false
+	FileStruct.ConfigPath = tools.ConfigPath
 }
 
 func (op *Operate) del(trim string) *Operate {
@@ -245,7 +244,17 @@ func rangeArray() {
 func Init() {
 	// 初始化配置文件
 	// 如果配置文件不存在，创建后往配置文件写
-	tools.FileCreate(tools.ConfigPath+tools.IniConfigFileName, configObj.NewJsonAndSqlFile)
+	configFileName := FileStruct.ConfigPath + tools.IniConfigFileName
+	tools.PathFileExists(FileStruct.ConfigPath, false)
+	exists, _ := tools.FileExists(configFileName)
+	if !exists {
+		f, err := os.Create(configFileName)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+		f.WriteString(tools.IniConfig)
+	}
 	// 初始化sql文件
 	tools.FileCreate(tools.SqlName, configObj.NewJsonAndSqlFile)
 

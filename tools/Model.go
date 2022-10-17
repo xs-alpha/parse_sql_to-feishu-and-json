@@ -22,12 +22,14 @@ type IniModel struct {
 type SqlConfig struct {
 	HupName           bool `ini:"hupName"`
 	NewJsonAndSqlFile bool `ini:"newJsonAndSqlFile"`
+	TableName         bool `ini:"tableName"`
 }
 
 type FileStruct struct {
 	JsonFileName string
 	XLSXFileName string
 	DirPath      string
+	ConfigPath   string
 }
 
 func (t *StructModel) JudgeType() {
