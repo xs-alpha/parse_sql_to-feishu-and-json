@@ -15,6 +15,21 @@ type StructModel struct {
 	OriginType  string
 }
 
+type IniModel struct {
+	SqlConfig `ini:"sql"`
+}
+
+type SqlConfig struct {
+	HupName           bool `ini:"hupName"`
+	NewJsonAndSqlFile bool `ini:"newJsonAndSqlFile"`
+}
+
+type FileStruct struct {
+	JsonFileName string
+	XLSXFileName string
+	DirPath      string
+}
+
 func (t *StructModel) JudgeType() {
 	item := t.OriginType
 	if FieldsInclude(item, "varchar") {
@@ -72,5 +87,25 @@ func (t *StructModel) DealWithName() {
 			splitStr = strings.Split(t.Name, "（")
 		}
 		t.Name = splitStr[0]
+	}
+}
+
+// HumpName 驼峰处理
+func (t *StructModel) HumpName() {
+	if strings.Contains(t.Alias, "_") {
+		split := strings.Split(t.Alias, "_")
+		allWorld := ""
+		for index, item := range split {
+			if index == 0 {
+				allWorld += item
+			}
+			if index != 0 && len(item) != 0 {
+				firstLetter := strings.ToUpper(string(item[0]))
+				otherLetter := item[1:]
+				eachWorld := firstLetter + otherLetter
+				allWorld += eachWorld
+			}
+		}
+		t.Alias = allWorld
 	}
 }

@@ -2,7 +2,10 @@ module xiaosheng
 
 go 1.19
 
-require github.com/xuri/excelize/v2 v2.6.1
+require (
+	github.com/xuri/excelize/v2 v2.6.1
+	gopkg.in/ini.v1 v1.67.0
+)
 
 require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect

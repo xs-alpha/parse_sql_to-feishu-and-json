@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/xuri/excelize/v2"
+	"gopkg.in/ini.v1"
 	"io"
 	"log"
 	"os"
@@ -23,8 +24,19 @@ var (
 
 type Model = tools.StructModel
 
+var FileStruct = new(tools.FileStruct)
+var configObj = new(tools.IniModel)
+
 type Operate struct {
 	str string
+}
+
+func init() {
+	FileStruct.JsonFileName = tools.JsonFileName
+	FileStruct.XLSXFileName = tools.XLSXFileName
+	FileStruct.DirPath = tools.DirPath
+
+	//configObj.NewJsonAndSqlFile = false
 }
 
 func (op *Operate) del(trim string) *Operate {
@@ -75,6 +87,23 @@ func parse(content string) {
 		return
 	}
 
+	//如果含有表名或者
+	if strings.Contains(lower, "table") {
+		split := strings.Split(lower, " ")
+		for _, item := range split {
+			if strings.Contains(item, "`") {
+				// 获取表名
+				tableName := strings.Replace(item, "`", "", -1)
+				jsonFileName := tableName + ".json"
+				xlsxFileName := tableName + ".xlsx"
+				FileStruct.JsonFileName = jsonFileName
+				FileStruct.XLSXFileName = xlsxFileName
+			}
+		}
+		fmt.Println(split)
+		return
+	}
+
 	// 判断是否包含基本数据类型
 	flag := false
 	for _, item := range tools.SqlKeyWord {
@@ -86,56 +115,56 @@ func parse(content string) {
 		return
 	}
 
-	//如果含有表名或者
-	if strings.Contains(lower, "table") {
-		return
-	} else {
-		splitStringList := strings.Split(lower, " ")
-		m := new(Model)
-		m.IsNecessary = "否"
-		originTypeIndex := 0
-		for index, eachItem := range splitStringList {
-			if len(eachItem) == 0 || strings.EqualFold(eachItem, " ") {
-				originTypeIndex++
-				continue
-			}
-			// 未后续操作做铺垫
-			o := new(Operate)
-			(*o).str = eachItem
-
-			if strings.HasPrefix(eachItem, "`") && strings.HasSuffix(eachItem, "`") {
-				// todo:去掉``
-				o.del("`")
-				m.Alias = o.str
-				originTypeIndex = index + 1
-			}
-			//if strings.HasSuffix(eachItem, "'")||strings.HasSuffix(eachItem, ",")||IsChineseChar(eachItem)
-			if index == originTypeIndex {
-				o.del("'").del("\"")
-				m.OriginType = o.str
-			}
-			m.IsNecessary = "否"
-			if index == len(splitStringList)-1 {
-				// 去掉‘’或者“”“”获取注释
-				o.del("'").del("\"").del(",")
-				m.NameNote = o.str
-				m.Name = o.str
-				//m.Type = "number"
-			}
-
+	splitStringList := strings.Split(lower, " ")
+	m := new(Model)
+	m.IsNecessary = "否"
+	originTypeIndex := 0
+	for index, eachItem := range splitStringList {
+		if len(eachItem) == 0 || strings.EqualFold(eachItem, " ") {
+			originTypeIndex++
+			continue
 		}
-		m.JudgeType()
-		m.DealWithName()
-		FeishuStringList = append(FeishuStringList, *m)
+		// 未后续操作做铺垫
+		o := new(Operate)
+		(*o).str = eachItem
+
+		if strings.HasPrefix(eachItem, "`") && strings.HasSuffix(eachItem, "`") {
+			// todo:去掉``
+			o.del("`")
+			m.Alias = o.str
+			originTypeIndex = index + 1
+		}
+		//if strings.HasSuffix(eachItem, "'")||strings.HasSuffix(eachItem, ",")||IsChineseChar(eachItem)
+		if index == originTypeIndex {
+			o.del("'").del("\"")
+			m.OriginType = o.str
+		}
+		m.IsNecessary = "否"
+		if index == len(splitStringList)-1 {
+			// 去掉‘’或者“”“”获取注释
+			o.del("'").del("\"").del(",")
+			m.NameNote = o.str
+			m.Name = o.str
+			//m.Type = "number"
+		}
+
 	}
-	fmt.Println(FeishuStringList)
+	m.JudgeType()
+	m.DealWithName()
+	if configObj.HupName {
+		m.HumpName()
+	}
+	FeishuStringList = append(FeishuStringList, *m)
 }
 
+// writeToFile 写json
 func writeToFile() {
-	f, err := os.Create("json.json")
-	if err != nil {
-		log.Fatal(err)
+	filename := path.Join(FileStruct.DirPath, FileStruct.JsonFileName)
+	create := tools.FileCreate(filename, configObj.NewJsonAndSqlFile)
+	if create != "" {
+		filename = create
 	}
+	f, _ := os.OpenFile(filename, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
 	defer f.Close()
 	f.WriteString("{\n")
 	for i, m := range FeishuStringList {
@@ -154,7 +183,8 @@ func writeToFile() {
 
 func writeToExcel() error {
 	activeSheetName := tools.ActiveSheetName
-	fileNamePath := path.Join(tools.DirPath, tools.XLSXFileName)
+	fileNamePath := path.Join(FileStruct.DirPath, FileStruct.XLSXFileName)
+	tools.PathFileExists(tools.DirPath, false)
 	exists, err := tools.FileExists(fileNamePath)
 	rowNum := 0
 	lastLineNum := 0
@@ -212,6 +242,20 @@ func rangeArray() {
 	}
 }
 
+func Init() {
+	// 初始化配置文件
+	// 如果配置文件不存在，创建后往配置文件写
+	tools.FileCreate(tools.ConfigPath+tools.IniConfigFileName, configObj.NewJsonAndSqlFile)
+	// 初始化sql文件
+	tools.FileCreate(tools.SqlName, configObj.NewJsonAndSqlFile)
+
+	err := ini.MapTo(configObj, path.Join(tools.ConfigPath, tools.IniConfigFileName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(configObj.NewJsonAndSqlFile)
+}
+
 func main() {
 	/**
 	按行赋值
@@ -223,6 +267,11 @@ func main() {
 	err := f.SetSheetRow("Sheet1", "B6", &[]interface{}{"1", nil, 2})
 
 	*/
+	// 初始化配置文件，判断有没有配置文件和sql文件
+
+	// 用配置文件中的配置覆盖默认配置
+
+	Init()
 	getSql()
 	wg.Wait()
 }
