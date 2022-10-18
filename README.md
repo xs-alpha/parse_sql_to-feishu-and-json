@@ -19,7 +19,7 @@ run software and you will get two file
 > 可以下载源码来更改文件名和路径，相对应的代码在tools./const.go
 
 自动生成配置文件
-  支持配置文件配置
+  - 支持配置文件配置
 
 支持解析
   - sql生成飞书表格 && 并生成json
