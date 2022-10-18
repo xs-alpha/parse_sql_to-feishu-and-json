@@ -20,6 +20,7 @@ import (
 var (
 	FeishuStringList = make([]tools.StructModel, 0)
 	wg               = sync.WaitGroup{}
+	FeishuStringJson = make([]string, 0)
 )
 
 type Model = tools.StructModel
@@ -36,6 +37,7 @@ func init() {
 	FileStruct.XLSXFileName = tools.XLSXFileName
 	FileStruct.DirPath = tools.DirPath
 	FileStruct.ConfigPath = tools.ConfigPath
+	FileStruct.FeishuParseFile = tools.FeishuParseFile
 }
 
 func (op *Operate) del(trim string) *Operate {
@@ -63,7 +65,7 @@ func getSql() {
 
 		parse(string(content))
 		if err == io.EOF {
-			fmt.Println("一共有", totLine, "行内容")
+			fmt.Println("[*]->:一共有", totLine, "行内容")
 			rangeArray()
 			wg.Add(1)
 			go writeToFile()
@@ -183,7 +185,6 @@ func writeToFile() {
 func writeToExcel() error {
 	activeSheetName := tools.ActiveSheetName
 	fileNamePath := path.Join(FileStruct.DirPath, FileStruct.XLSXFileName)
-	tools.PathFileExists(tools.DirPath, false)
 	exists, err := tools.FileExists(fileNamePath)
 	rowNum := 0
 	lastLineNum := 0
@@ -262,34 +263,103 @@ func Init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(configObj.NewJsonAndSqlFile)
+	FileStruct.DirPath = configObj.OutPutDir
+	tools.PathFileExists(FileStruct.DirPath, false)
+	filePattern := strings.Split(FileStruct.FeishuParseFile, ".")
+	if len(filePattern) > 1 {
+		FileStruct.FeiShuParseFileResult = filePattern[0] + "result." + filePattern[1]
+	} else {
+		FileStruct.FeiShuParseFileResult = filePattern[0] + "result"
+	}
+	wg.Done()
+}
+
+func parseFeishu() {
+	f, err := os.Open(FileStruct.FeishuParseFile)
+	defer f.Close()
+	if err != nil {
+		fmt.Println("err:----", err)
+	}
+	reader := bufio.NewReader(f)
+	totLine := 0
+	for {
+		content, isPrefix, err := reader.ReadLine()
+
+		//当单行的内容超过缓冲区时，isPrefix会被置为真；否则为false；
+		if !isPrefix {
+			totLine++
+		}
+		cont := string(content)
+		if len(strings.TrimSpace(cont)) > 0 {
+			eachLine := "\"" + cont + "\":\"\""
+			FeishuStringJson = append(FeishuStringJson, eachLine)
+		}
+		if err == io.EOF {
+			fmt.Println("[*]->:一共解析有", totLine, "行内容")
+			break
+		}
+	}
+	writeToJson()
+}
+
+func writeToJson() {
+	f, _ := os.OpenFile(path.Join(FileStruct.DirPath, FileStruct.FeiShuParseFileResult), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	defer f.Close()
+	f.WriteString("{\n")
+	for index, item := range FeishuStringJson {
+		insertStr := strings.TrimSpace(item)
+		if index != len(FeishuStringJson)-1 {
+			insertStr += ","
+		}
+		_, err := f.WriteString("\t" + insertStr + "\n")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	f.WriteString("}\n")
 }
 
 func main() {
-	/**
-	按行赋值
-
-	func (f *File) SetSheetRow(sheet, cell string, slice interface{}) error
-
-	根据给定的工作表名称、起始坐标和 slice 类型引用按行赋值。此功能是并发安全的。例如，在名为 Sheet1 的工作表第 6 行上，以 B6 单元格作为起始坐标按行赋值：
-
-	err := f.SetSheetRow("Sheet1", "B6", &[]interface{}{"1", nil, 2})
-
-	*/
 	// 初始化配置文件，判断有没有配置文件和sql文件
 
 	// 用配置文件中的配置覆盖默认配置
 
-	var excute = 1
-	fmt.Println("请输入要进行的操作： 1：根据sql生成json和飞书表单  2： 根据飞书表格字段名生成json")
-	fmt.Print("->:")
-	fmt.Scanln(&excute)
-	if excute == 1 {
-		Init()
-		getSql()
-		wg.Wait()
-	} else {
+	fmt.Println("[*]->:\t正在进行初始化配置文件和sql文件")
+	wg.Add(1)
+	go Init()
 
+	var excute = 1
+
+	for {
+		fmt.Println("\n请输入要进行的操作： 1：根据sql生成json和飞书表单  2： 根据飞书表格字段名生成json 3:退出")
+		fmt.Print("[*]->:")
+		fmt.Scanln(&excute)
+		if excute == 1 {
+			getSql()
+		} else if excute == 2 {
+			wg.Add(1)
+			go func() {
+				stat, _ := os.Stat(FileStruct.FeishuParseFile)
+				if stat == nil {
+					f, err := os.Create(FileStruct.FeishuParseFile)
+					if err != nil {
+						fmt.Println("err occured when create file: ", err)
+					}
+					f.Close()
+				}
+
+				wg.Done()
+			}()
+			fmt.Println("[*]->:在填充完当前目录下的解析文件后按回车")
+			fmt.Print("[*]->:")
+			enter := ""
+			fmt.Scanln(&enter)
+			parseFeishu()
+		} else {
+			break
+		}
 	}
+
+	wg.Wait()
 	// 根据数据库字段名自动生成json, 添加cmd args处理或者从用户端输入
 }

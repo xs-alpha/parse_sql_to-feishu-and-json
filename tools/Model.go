@@ -16,7 +16,8 @@ type StructModel struct {
 }
 
 type IniModel struct {
-	SqlConfig `ini:"sql"`
+	SqlConfig      `ini:"sql"`
+	FileNameConfig `ini:"filename"`
 }
 
 type SqlConfig struct {
@@ -25,11 +26,18 @@ type SqlConfig struct {
 	TableName         bool `ini:"tableName"`
 }
 
+type FileNameConfig struct {
+	OutPutDir       string `ini:"outPutDir"`
+	FeishuParseFile string `ini:"feishuParseFile"`
+}
+
 type FileStruct struct {
-	JsonFileName string
-	XLSXFileName string
-	DirPath      string
-	ConfigPath   string
+	JsonFileName          string
+	XLSXFileName          string
+	DirPath               string
+	ConfigPath            string
+	FeishuParseFile       string
+	FeiShuParseFileResult string
 }
 
 func (t *StructModel) JudgeType() {
