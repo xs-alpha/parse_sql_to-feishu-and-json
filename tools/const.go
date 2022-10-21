@@ -7,7 +7,7 @@ var (
 	JsonFileName      = "json.json"
 	XLSXFileName      = "csv.xlsx"
 	ActiveSheetName   = "test"
-	SqlName           = "parse1.sql"
+	SqlName           = "parse.sql"
 	DirPath           = "test/"
 	ConfigPath        = "config/"
 	IniConfigFileName = "config.ini"
