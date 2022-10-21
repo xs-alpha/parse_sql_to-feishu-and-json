@@ -1,4 +1,4 @@
-package tools
+package moudle
 
 // author：xiaosheng
 
@@ -49,7 +49,7 @@ func (t *StructModel) JudgeType() {
 		t.Type = "integer"
 	}
 	if FieldsInclude(item, "bigint") {
-		t.Type = "number"
+		t.Type = "Long"
 	}
 	if FieldsInclude(item, "tinyint") {
 		t.Type = "integer"

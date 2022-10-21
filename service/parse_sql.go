@@ -1,4 +1,4 @@
-package main
+package service
 
 // author：xiaosheng
 
@@ -14,19 +14,21 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"xiaosheng/moudle"
 	"xiaosheng/tools"
+	"xiaosheng/util"
 )
 
 var (
-	FeishuStringList = make([]tools.StructModel, 0)
-	wg               = sync.WaitGroup{}
+	FeishuStringList = make([]moudle.StructModel, 0)
+	Wg               = sync.WaitGroup{}
 	FeishuStringJson = make([]string, 0)
 )
 
-type Model = tools.StructModel
+type Model = moudle.StructModel
 
-var FileStruct = new(tools.FileStruct)
-var configObj = new(tools.IniModel)
+var FileStruct = new(moudle.FileStruct)
+var configObj = new(moudle.IniModel)
 
 type Operate struct {
 	str string
@@ -46,7 +48,7 @@ func (op *Operate) del(trim string) *Operate {
 	return op
 }
 
-func getSql() {
+func GetSql() {
 	f, err := os.Open(tools.SqlName)
 	defer f.Close()
 	if err != nil {
@@ -67,9 +69,9 @@ func getSql() {
 		if err == io.EOF {
 			fmt.Println("[*]->:一共有", totLine, "行内容")
 			rangeArray()
-			wg.Add(1)
+			Wg.Add(1)
 			go writeToFile()
-			wg.Add(1)
+			Wg.Add(1)
 			go writeToExcel()
 			break
 		}
@@ -107,7 +109,7 @@ func parse(content string) {
 
 	// 判断是否包含基本数据类型
 	flag := false
-	for _, item := range tools.SqlKeyWord {
+	for _, item := range moudle.SqlKeyWord {
 		if strings.Contains(strings.ToLower(content), item) {
 			flag = true
 		}
@@ -161,7 +163,7 @@ func parse(content string) {
 // writeToFile 写json
 func writeToFile() {
 	filename := path.Join(FileStruct.DirPath, FileStruct.JsonFileName)
-	create := tools.FileCreate(filename, configObj.NewJsonAndSqlFile)
+	create := util.FileCreate(filename, configObj.NewJsonAndSqlFile)
 	if create != "" {
 		filename = create
 	}
@@ -179,13 +181,13 @@ func writeToFile() {
 		}
 	}
 	f.WriteString("}\n")
-	wg.Done()
+	Wg.Done()
 }
 
 func writeToExcel() error {
 	activeSheetName := tools.ActiveSheetName
 	fileNamePath := path.Join(FileStruct.DirPath, FileStruct.XLSXFileName)
-	exists, err := tools.FileExists(fileNamePath)
+	exists, err := util.FileExists(fileNamePath)
 	rowNum := 0
 	lastLineNum := 0
 	var f *excelize.File
@@ -231,7 +233,7 @@ func writeToExcel() error {
 		fmt.Println(err)
 		return errors.New(fmt.Sprintf("save file failed, path:(%s)", fileNamePath))
 	}
-	wg.Done()
+	Wg.Done()
 	return nil
 }
 
@@ -246,8 +248,8 @@ func Init() {
 	// 初始化配置文件
 	// 如果配置文件不存在，创建后往配置文件写
 	configFileName := FileStruct.ConfigPath + tools.IniConfigFileName
-	tools.PathFileExists(FileStruct.ConfigPath, false)
-	exists, _ := tools.FileExists(configFileName)
+	util.PathFileExists(FileStruct.ConfigPath, false)
+	exists, _ := util.FileExists(configFileName)
 	if !exists {
 		f, err := os.Create(configFileName)
 		if err != nil {
@@ -257,24 +259,34 @@ func Init() {
 		f.WriteString(tools.IniConfig)
 	}
 	// 初始化sql文件
-	tools.FileCreate(tools.SqlName, configObj.NewJsonAndSqlFile)
+	util.FileCreate(tools.SqlName, configObj.NewJsonAndSqlFile)
 
 	err := ini.MapTo(configObj, path.Join(tools.ConfigPath, tools.IniConfigFileName))
 	if err != nil {
 		log.Fatal(err)
 	}
-	FileStruct.DirPath = configObj.OutPutDir
-	tools.PathFileExists(FileStruct.DirPath, false)
+	coverConfig()
+
+	util.PathFileExists(FileStruct.DirPath, false)
 	filePattern := strings.Split(FileStruct.FeishuParseFile, ".")
 	if len(filePattern) > 1 {
 		FileStruct.FeiShuParseFileResult = filePattern[0] + "result." + filePattern[1]
 	} else {
 		FileStruct.FeiShuParseFileResult = filePattern[0] + "result"
 	}
-	wg.Done()
+	Wg.Done()
 }
 
-func parseFeishu() {
+func coverConfig() {
+	if len(configObj.OutPutDir) != 0 {
+		FileStruct.DirPath = configObj.OutPutDir
+	}
+	if len(configObj.FeishuParseFile) != 0 {
+		FileStruct.FeishuParseFile = configObj.FeishuParseFile
+	}
+}
+
+func ParseFeishu() {
 	f, err := os.Open(FileStruct.FeishuParseFile)
 	defer f.Close()
 	if err != nil {
@@ -317,49 +329,4 @@ func writeToJson() {
 		}
 	}
 	f.WriteString("}\n")
-}
-
-func main() {
-	// 初始化配置文件，判断有没有配置文件和sql文件
-
-	// 用配置文件中的配置覆盖默认配置
-
-	fmt.Println("[*]->:\t正在进行初始化配置文件和sql文件")
-	wg.Add(1)
-	go Init()
-
-	var excute = 1
-
-	for {
-		fmt.Println("\n请输入要进行的操作： 1：根据sql生成json和飞书表单  2： 根据飞书表格字段名生成json 3:退出")
-		fmt.Print("[*]->:")
-		fmt.Scanln(&excute)
-		if excute == 1 {
-			getSql()
-		} else if excute == 2 {
-			wg.Add(1)
-			go func() {
-				stat, _ := os.Stat(FileStruct.FeishuParseFile)
-				if stat == nil {
-					f, err := os.Create(FileStruct.FeishuParseFile)
-					if err != nil {
-						fmt.Println("err occured when create file: ", err)
-					}
-					f.Close()
-				}
-
-				wg.Done()
-			}()
-			fmt.Println("[*]->:在填充完当前目录下的解析文件后按回车")
-			fmt.Print("[*]->:")
-			enter := ""
-			fmt.Scanln(&enter)
-			parseFeishu()
-		} else {
-			break
-		}
-	}
-
-	wg.Wait()
-	// 根据数据库字段名自动生成json, 添加cmd args处理或者从用户端输入
 }

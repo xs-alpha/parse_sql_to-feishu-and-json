@@ -1,4 +1,4 @@
-CREATE TABLE `parking_order`
+CREATE TABLE `parking_orderu`
 (
     `order_id`      varchar(64)  NOT NULL COMMENT '订单号',
     `user_id`       bigint       NOT NULL COMMENT '司机id',

@@ -1,4 +1,4 @@
-package tools
+package util
 
 // author：xiaosheng
 
@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+	"xiaosheng/tools"
 )
 
 // PathFileExists 目录不存在则创建目录
@@ -42,7 +43,7 @@ func FileExists(path string) (bool, error) {
 // FileCreate 文件不存在则创建
 func FileCreate(p string, flag bool) string {
 	exists, _ := FileExists(p)
-	PathFileExists(ConfigPath, false)
+	PathFileExists(tools.ConfigPath, false)
 	if exists {
 		// 有这个文件就添加后缀
 		if flag {
