@@ -303,6 +303,9 @@ func ParseFeishu() {
 		}
 		cont := string(content)
 		if len(strings.TrimSpace(cont)) > 0 {
+			if configObj.FeishuJsonHupName {
+				moudle.HumpNameInJson(&cont)
+			}
 			eachLine := "\"" + cont + "\":\"\""
 			FeishuStringJson = append(FeishuStringJson, eachLine)
 		}

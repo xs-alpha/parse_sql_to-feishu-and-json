@@ -27,8 +27,9 @@ type SqlConfig struct {
 }
 
 type FileNameConfig struct {
-	OutPutDir       string `ini:"outPutDir"`
-	FeishuParseFile string `ini:"feishuParseFile"`
+	OutPutDir         string `ini:"outPutDir"`
+	FeishuParseFile   string `ini:"feishuParseFile"`
+	FeishuJsonHupName bool   `ini:"feishuJsonHupName"`
 }
 
 type FileStruct struct {
@@ -117,5 +118,25 @@ func (t *StructModel) HumpName() {
 			}
 		}
 		t.Alias = allWorld
+	}
+}
+
+// HumpNameInJson 驼峰处理
+func HumpNameInJson(item *string) {
+	if strings.Contains(*item, "_") {
+		split := strings.Split(*item, "_")
+		allWorld := ""
+		for index, item := range split {
+			if index == 0 {
+				allWorld += item
+			}
+			if index != 0 && len(item) != 0 {
+				firstLetter := strings.ToUpper(string(item[0]))
+				otherLetter := item[1:]
+				eachWorld := firstLetter + otherLetter
+				allWorld += eachWorld
+			}
+		}
+		*item = allWorld
 	}
 }
